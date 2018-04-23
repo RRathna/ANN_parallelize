@@ -15,7 +15,7 @@
 const char *path_to_data = "example/iris.data"; //ignore
 
 double *input, *class;
-int samples;
+unsigned int samples;
 const char *class_names[] = {"0","1","2","3","4","5","6","7","8","9"};
 
 void load_data() {  //ignore this function, not using it
@@ -37,8 +37,10 @@ void load_data() {  //ignore this function, not using it
 
     /* Allocate memory for input and output data. */
     input = malloc(sizeof(double) * samples * 4);
+    
+    
     class = malloc(sizeof(double) * samples * 3);
-
+    
     /* Read the file into our arrays. */
     int i, j;
     for (i = 0; i < samples; ++i) {
@@ -75,47 +77,47 @@ void load_data() {  //ignore this function, not using it
 void load_mnist()
 {
     mnist_data *data_t, *temp;
-    double cnt;
+    unsigned int cnt;
     int ret;
     
-    if (ret = mnist_load("mnist/t10k-images-idx3-ubyte", "mnist/t10k-labels-idx1-ubyte", &data_t, &cnt)) {
+    if (ret = mnist_load("mnist/train-images-idx3-ubyte", "mnist/train-labels-idx1-ubyte", &data_t, &cnt)) {
         printf("An error occured: %d\n", ret);
     } else {
         printf("image count: %d\n", cnt);
     }
+    //cnt = 100;
     /* Allocate memory for input and output data. */
-    input = malloc(sizeof(double) * cnt * 28*28);
-    class = malloc(sizeof(double) * cnt * 10);
+    input = (double *) malloc(sizeof(double) * cnt * 28*28);
+    if (input == NULL)
+    {
+        printf("Input malloc error");
+        exit(-1);
+    }
+    class = (double *) malloc(sizeof(double) * cnt * 10);
+    if (class == NULL)
+    {
+        printf("class malloc error");
+        exit(-1);
+    }
+    
+
     temp = data_t;
     int i, j,k;
-    for (i = 0; i < cnt; ++i) {
+    for (i = 0; i <cnt; ++i) {
         double *p = input + i * 28*28;
         double *c = class + i * 10;
-//        if(i == 4){
-//            printf("row 4");
-//            continue;
-//        }
         c[0] = c[1] = c[2] = c[4] = c[5] = c[6] = c[7] = c[8] = c[9] = 0.0;
-        printf("pointers allocated for data row %d \n",i);
-        for (j = 0; j < 28; ++j) {
-
-            for ( k =0; k<28; ++k)
-            {
-                if(i == 4){
-                    //printf("row 4");
-                    //printf("row %d, image row %d \n",i,j);
-                    printf("row %d, image row %d, image col %d , value = %f \n",i,j,k, temp->data[j][k]);
-                    //continue;
-                }
-//                printf("row %d, image row %d, image col %d , value = %f \n",i,j,k, temp->data[j][k]);
-//                *(p + j*28 + k) = temp->data[j][k];
+        //printf("pointers allocated for data row %d \n",i);
+        for (j = 0; j < 28*28; ++j) {
+               //printf("data line %d, j %d, image row %d,image col %d value = %f \n",i,j,j/28,j%28, temp->data[j/28][j%28]);
+               *(p + j) = temp->data[j/28][j%28];
             }
-        }
-        printf("row %d saved\n",i);
+
         *(c + (int)temp->label) = 1.0;
-        temp = temp + sizeof(mnist_data);
+        temp = temp + 1;
     }
     samples = cnt;
+    //printf("image count %d", cnt);
     free(data_t);
 }
 
@@ -142,21 +144,29 @@ int main(int argc, char *argv[])
     printf("Training for %d loops over data.\n", loops);
     for (i = 0; i < loops; ++i) {
         for (j = 0; j < samples; ++j) {
-            genann_train(ann, input + j*4, class + j*3, .01);
+            genann_train(ann, input + j*28*28, class + j*10, .01);
         }
         /* printf("%1.2f ", xor_score(ann)); */
     }
 
     int correct = 0;
     for (j = 0; j < samples; ++j) {
-        const double *guess = genann_run(ann, input + j*4);
-        if (class[j*3+0] == 1.0) {if (guess[0] > guess[1] && guess[0] > guess[2]) ++correct;}
-        else if (class[j*3+1] == 1.0) {if (guess[1] > guess[0] && guess[1] > guess[2]) ++correct;}
-        else if (class[j*3+2] == 1.0) {if (guess[2] > guess[0] && guess[2] > guess[1]) ++correct;}
-        else {printf("Logic error.\n"); exit(1);}
+        const double *guess = genann_run(ann, input + j*28*28);
+        double max = 0.0, max_cls = 0;
+        int k =0;
+        for (k =0; k < 10; k++)
+        {
+            if (guess[k]> max) {
+                max = guess[k];
+                max_cls = k;
+            }
+        }
+        if (class[j*10+k] == 1.0) ++correct;
+        //else {printf("Logic error.\n"); exit(1);
+
     }
 
-    printf("%d/%d correct (%0.1f%%).\n", correct, samples, (double)correct / samples * 100.0);
+    printf("\n\n %d/%d correct (%0.1f%%).\n", correct, samples, (double)correct / samples * 100.0);
 
 
 
