@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     /* Load test images into input */
     free(input);
     free(class);
-    load_mnist("t10k-images-idx3-ubyte","t10k-labels-idx1-ubyte");
+    load_mnist("mnist/t10k-images-idx3-ubyte","mnist/t10k-labels-idx1-ubyte");
     int correct = 0;
     for (j = 0; j < samples; ++j) {
         const double *guess = genann_run(ann, input + j*28*28);
