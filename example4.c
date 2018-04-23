@@ -72,7 +72,42 @@ void load_data() {  //ignore this function, not using it
     fclose(in);
 } //ignore function, not using it
 
-
+void load_mnist()
+{
+    mnist_data *data_t, *temp;
+    unsigned int cnt;
+    int ret;
+    
+    if (ret = mnist_load("mnist/train-images-idx3-ubyte", "mnist/train-labels-idx1-ubyte", &data_t, &cnt)) {
+        printf("An error occured: %d\n", ret);
+    } else {
+        printf("image count: %d\n", cnt);
+    }
+    /* Allocate memory for input and output data. */
+    input = malloc(sizeof(double) * cnt * 28*28);
+    class = malloc(sizeof(int) * cnt * 10);
+    temp = data_t;
+    int i, j,k;
+    for (i = 0; i < cnt; ++i) {
+        double *p = input + i * 28*28;
+        double *c = class + i * 10;
+        c[0] = c[1] = c[2] = c[4] = c[5] = c[6] = c[7] = c[8] = c[9] = 0.0;
+        printf("pointers allocated for data row %d \n",i);
+        for (j = 0; j < 28; ++j) {
+            //printf("row %d, image row %d \n",i,j);
+            for ( k =0; k<28; ++k)
+            {
+                printf("row %d, image row %d, image col %d , value = %f \n",i,j,k, temp->data[j][k]);
+                *(p + j*28 + k) = temp->data[j][k];
+            }
+        }
+        printf("row %d saved\n",i);
+        c[temp->label] = 1.0;
+        temp = temp + sizeof(mnist_data);
+    }
+    samples = cnt;
+    free(data_t);
+}
 
 
 int main(int argc, char *argv[])
@@ -87,10 +122,11 @@ int main(int argc, char *argv[])
      * 1 hidden layer(s) of 4 neurons.
      * 3 outputs (1 per class)
      */
+    printf("load done\n");
     genann *ann = genann_init(28*28, 3, 5, 10);
 
     int i, j;
-    int loops = 5000;
+    int loops = 500;
 
     /* Train the network with backpropagation. */
     printf("Training for %d loops over data.\n", loops);
