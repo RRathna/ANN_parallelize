@@ -78,7 +78,7 @@ void load_mnist()
     unsigned int cnt;
     int ret;
     
-    if (ret = mnist_load("mnist/train-images-idx3-ubyte", "mnist/train-labels-idx1-ubyte", &data_t, &cnt)) {
+    if (ret = mnist_load("mnist/t10k-images-idx3-ubyte", "mnist/t10k-labels-idx1-ubyte", &data_t, &cnt)) {
         printf("An error occured: %d\n", ret);
     } else {
         printf("image count: %d\n", cnt);
