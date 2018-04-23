@@ -23,7 +23,7 @@ void load_mnist(char *images_fname, char *labels_fname)
     } else {
         printf("image count: %d\n", cnt);
     }
-    //cnt = 100;
+    cnt = 100;
     /* Allocate memory for input and output data. */
     input = (double *) malloc(sizeof(double) * cnt * 28*28);
     if (input == NULL)
@@ -68,25 +68,28 @@ int main(int argc, char *argv[])
     /* Load the data from file. */
     load_mnist("mnist/train-images-idx3-ubyte","mnist/train-labels-idx1-ubyte");
     
-    /* 4 inputs.
-     * 1 hidden layer(s) of 4 neurons.
-     * 3 outputs (1 per class)
+    /* 28*28 inputs.
+     * 3 hidden layer(s) of 5 neurons.
+     * 10 outputs (1 per class)
      */
     printf("load done\n");
     genann *ann = genann_init(28*28, 3, 5, 10);
 
     int i, j;
-    int loops = 500;
+    int loops = 1000;
 
     /* Train the network with backpropagation. */
     printf("Training for %d loops over data.\n", loops);
     for (i = 0; i < loops; ++i) {
         for (j = 0; j < samples; ++j) {
-            genann_train(ann, input + j*28*28, class + j*10, .01);
+            genann_train(ann, input + j*28*28, class + j*10, .001);
         }
-        /* printf("%1.2f ", xor_score(ann)); */
     }
-
+    
+    /* Load test images into input */
+    free(input);
+    free(class);
+    load_mnist("t10k-images-idx3-ubyte","t10k-labels-idx1-ubyte");
     int correct = 0;
     for (j = 0; j < samples; ++j) {
         const double *guess = genann_run(ann, input + j*28*28);
