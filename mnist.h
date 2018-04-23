@@ -28,12 +28,12 @@ extern "C" {
 #ifdef MNIST_DOUBLE
 #define MNIST_DATA_TYPE double
 #else
-#define MNIST_DATA_TYPE unsigned char
+#define MNIST_DATA_TYPE unsigned double
 #endif
 
 typedef struct mnist_data {
 	MNIST_DATA_TYPE data[28][28]; /* 28x28 data for the image */
-	unsigned int label; /* label : 0 to 9 */
+	double label; /* label : 0 to 9 */
 } mnist_data;
 
 /*
