@@ -6,6 +6,7 @@
 #include <string.h>
 #include <math.h>
 #include "genann.h"
+#include <time.h>
 
 double *input, *class;
 unsigned int samples;
@@ -23,7 +24,7 @@ void load_mnist(char *images_fname, char *labels_fname)
     } else {
         printf("image count: %d\n", cnt);
     }
-    cnt = 500; // was used for debugging with smaller data, to reduce run time
+    //cnt = 500; // was used for debugging with smaller data, to reduce run time
     /* Allocate memory for input and output data. */
     input = (double *) malloc(sizeof(double) * cnt * 28*28);
     if (input == NULL)
@@ -60,19 +61,21 @@ void load_mnist(char *images_fname, char *labels_fname)
 }
 
 int correct_predictions(genann *ann) {
-    int correct = 0;
-    for (int j = 0; j < samples; ++j) {
+    int correct = 0, j =0;
+    for (j = 0; j < samples; ++j) {
         const double *guess = genann_run(ann, input + j*28*28);
         double max = 0.0, max_cls = 0;
-        int k =0;
+        int k =0, actual =0;
         for (k =0; k < 10; k++)
         {
             if (guess[k]> max) {
                 max = guess[k];
                 max_cls = k;
             }
+            if (class[j*10 + k]== 1.0) actual = k;
+    
         }
-        if (class[j*10+k] == 1.0) ++correct;
+        if (class[j*10 + (int)max_cls] == 1.0) ++correct;
         //else {printf("Logic error.\n"); exit(1);
     }
     return correct;
@@ -87,6 +90,11 @@ int main(int argc, char *argv[])
     /* Load the data from file to train */
     load_mnist("mnist/train-images-idx3-ubyte","mnist/train-labels-idx1-ubyte");
     
+    /* Initialize time elements */
+    clock_t start, end;
+    double cpu_time_used;
+     
+    start = clock(); 
     /* 28*28 inputs.
      * 3 hidden layer(s) of 5 neurons.
      * 10 outputs (1 per class)
@@ -95,7 +103,7 @@ int main(int argc, char *argv[])
     genann *ann = genann_init(28*28, 3, 5, 10);
 
     int i, j;
-    int loops = 100;
+    int loops = 500;
 
     /* Train the network with backpropagation. */
     printf("Training for %d loops over data.\n", loops);
@@ -105,6 +113,10 @@ int main(int argc, char *argv[])
         }
     }
     
+    end = clock();
+    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    printf("train time taken : %f \n",cpu_time_used);
+  
     /* Load data from file to test */
     free(input);
     free(class);
