@@ -1,4 +1,4 @@
-CCFLAGS = -Wall -Wshadow -O2 -g
+CCFLAGS = -fopenmp -Wall -Wshadow -O2 -g
 LDLIBS = -lm
 
 
