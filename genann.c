@@ -31,7 +31,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <omp.h>
 
 #define LOOKUP_SIZE 4096
 
@@ -169,7 +168,6 @@ genann *genann_copy(genann const *ann) {
 
 void genann_randomize(genann *ann) {
     int i;
-
     for (i = 0; i < ann->total_weights; ++i) {
         double r = GENANN_RANDOM();
         /* Sets weights from -0.5 to 0.5. */
@@ -198,22 +196,20 @@ double const *genann_run(genann const *ann, double const *inputs) {
     const genann_actfun act = ann->activation_hidden;
     const genann_actfun acto = ann->activation_output;
     printf("ann->hidden_layers : %f; ann->hidden : %f \n",ann->hidden_layers, ann->hidden);
-        /* Figure hidden layers, if any. */
+    /* Figure hidden layers, if any. */
     for (h = 0; h < ann->hidden_layers; ++h) {
-#pragma omp parallel for private(j)
         for (j = 0; j < ann->hidden; ++j) {
-            double sum = *(w+j) * -1.0;
-//            printf("sum : %f",sum);
+            double sum = *w++ * -1.0;
+            printf("sum : %f",sum);
             for (k = 0; k < (h == 0 ? ann->inputs : ann->hidden); ++k) {
-                sum += *(w + h*ann->hidden + j+k) * i[k];
+                sum += *w++ * i[k];
             }
-            *(o + h*ann->hidden + j) = act(sum);
+            *o++ = act(sum);
         }
 
 
-	i += (h == 0 ? ann->inputs : ann->hidden);
+        i += (h == 0 ? ann->inputs : ann->hidden);
     }
-
 
     double const *ret = o;
 
@@ -249,12 +245,10 @@ void genann_train(genann const *ann, double const *inputs, double const *desired
 
         /* Set output layer deltas. */
         if (ann->activation_output == genann_act_linear) {
-
             for (j = 0; j < ann->outputs; ++j) {
                 *d++ = *t++ - *o++;
             }
         } else {
-
             for (j = 0; j < ann->outputs; ++j) {
                 *d++ = (*t - *o) * *o * (1.0 - *o);
                 ++o; ++t;
@@ -276,7 +270,7 @@ void genann_train(genann const *ann, double const *inputs, double const *desired
 
         /* Find first weight in following layer (which may be hidden or output). */
         double const * const ww = ann->weight + ((ann->inputs+1) * ann->hidden) + ((ann->hidden+1) * ann->hidden * (h));
-        #pragma omp parallel for
+
         for (j = 0; j < ann->hidden; ++j) {
 
             double delta = 0;
@@ -310,7 +304,6 @@ void genann_train(genann const *ann, double const *inputs, double const *desired
                 : 0);
 
         /* Set output layer weights. */
-        #pragma omp parallel for
         for (j = 0; j < ann->outputs; ++j) {
             for (k = 0; k < (ann->hidden_layers ? ann->hidden : ann->inputs) + 1; ++k) {
                 if (k == 0) {
@@ -343,7 +336,7 @@ void genann_train(genann const *ann, double const *inputs, double const *desired
                 ? ((ann->inputs+1) * ann->hidden + (ann->hidden+1) * (ann->hidden) * (h-1))
                 : 0);
 
-        #pragma omp parallel for
+
         for (j = 0; j < ann->hidden; ++j) {
             for (k = 0; k < (h == 0 ? ann->inputs : ann->hidden) + 1; ++k) {
                 if (k == 0) {
