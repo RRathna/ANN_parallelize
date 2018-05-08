@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
         printf("before reduce rank %d, ann->weight[20] : %f \n",rank,ann->weight[20]);
         MPI_Barrier(MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE,ann->weight,ann->total_weights,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-        for (j=0;j<ann->total_weights;j++) { ann->weight[i] = ann->weight[i]./w_size; }
+        for (j=0;j<ann->total_weights;j++) { ann->weight[j] = ann->weight[j]./w_size; }
         MPI_Barrier(MPI_COMM_WORLD);
         printf("after reduce rank %d, ann->weight[20] : %f \n",rank,ann->weight[20]);
     }
