@@ -114,10 +114,8 @@ int main(int argc, char *argv[])
       load_mnist("mnist/train-images-idx3-ubyte","mnist/train-labels-idx1-ubyte");
     }
       /* Initialize time elements */
-      clock_t start, end;
-      double cpu_time_used;
-     
-      start = clock();
+      double ts, te;     
+      ts = MPI_Wtime();
       MPI_Bcast(&samples, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     
 
@@ -158,22 +156,22 @@ int main(int argc, char *argv[])
     int loops = 20;
 
     /* Train the network with backpropagation. */
-    printf("Training for %d loops over data by rank %d\n", loops, rank);
+//    printf("Training for %d loops over data by rank %d\n", loops, rank);
     for (i = 0; i < loops; ++i) {
         for (j = 0; j < s_size; ++j) {
             genann_train(ann, s_data + j*28*28,s_class + j*10, .1);
         }
-        printf("before reduce rank %d, ann->weight[20] : %f \n",rank,ann->weight[20]);
+//        printf("before reduce rank %d, ann->weight[20] : %f \n",rank,ann->weight[20]);
         MPI_Barrier(MPI_COMM_WORLD);
         MPI_Allreduce(MPI_IN_PLACE,ann->weight,ann->total_weights,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-        for (j=0;j<ann->total_weights;j++) { ann->weight[j] = ann->weight[j]./w_size; }
+        for (j=0;j<ann->total_weights;j++) { ann->weight[j] = ann->weight[j]/w_size; }
         MPI_Barrier(MPI_COMM_WORLD);
-        printf("after reduce rank %d, ann->weight[20] : %f \n",rank,ann->weight[20]);
+//        printf("after reduce rank %d, ann->weight[20] : %f \n",rank,ann->weight[20]);
     }
     
-    end = clock();
-    cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    printf("train time taken : %f \n",cpu_time_used);
+    te = MPI_Wtime();
+    double cpu_time_used = (double) (te - ts);
+    if (rank == 0) { printf("train time taken : %f \n",cpu_time_used);}
 
     free(input);
     free(class);
