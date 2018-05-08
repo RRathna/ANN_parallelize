@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <omp.h>
 
 #define LOOKUP_SIZE 4096
 
@@ -198,21 +198,22 @@ double const *genann_run(genann const *ann, double const *inputs) {
     const genann_actfun act = ann->activation_hidden;
     const genann_actfun acto = ann->activation_output;
     printf("ann->hidden_layers : %f; ann->hidden : %f \n",ann->hidden_layers, ann->hidden);
-    /* Figure hidden layers, if any. */
-
+        /* Figure hidden layers, if any. */
     for (h = 0; h < ann->hidden_layers; ++h) {
+#pragma omp parallel for private(j)
         for (j = 0; j < ann->hidden; ++j) {
-            double sum = *w++ * -1.0;
-            printf("sum : %f",sum);
+            double sum = *(w+j) * -1.0;
+//            printf("sum : %f",sum);
             for (k = 0; k < (h == 0 ? ann->inputs : ann->hidden); ++k) {
-                sum += *w++ * i[k];
+                sum += *(w + h*ann->hidden + j+k) * i[k];
             }
-            *o++ = act(sum);
+            *(o + h*ann->hidden + j) = act(sum);
         }
 
 
-        i += (h == 0 ? ann->inputs : ann->hidden);
+	i += (h == 0 ? ann->inputs : ann->hidden);
     }
+
 
     double const *ret = o;
 
