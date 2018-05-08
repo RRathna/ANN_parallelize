@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <omp.h>
+
 
 #define LOOKUP_SIZE 4096
 
@@ -169,7 +169,7 @@ genann *genann_copy(genann const *ann) {
 
 void genann_randomize(genann *ann) {
     int i;
-#pragma omp parallel for
+
     for (i = 0; i < ann->total_weights; ++i) {
         double r = GENANN_RANDOM();
         /* Sets weights from -0.5 to 0.5. */
@@ -248,12 +248,12 @@ void genann_train(genann const *ann, double const *inputs, double const *desired
 
         /* Set output layer deltas. */
         if (ann->activation_output == genann_act_linear) {
-            #pragma omp parallel for
+
             for (j = 0; j < ann->outputs; ++j) {
                 *d++ = *t++ - *o++;
             }
         } else {
-            #pragma omp parallel for
+
             for (j = 0; j < ann->outputs; ++j) {
                 *d++ = (*t - *o) * *o * (1.0 - *o);
                 ++o; ++t;
