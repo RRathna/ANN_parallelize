@@ -236,11 +236,11 @@ double const *genann_run(genann const *ann, double const *inputs) {
 
 
 void genann_train_omp(genann const *ann, double const *input, double const *desired_output, double learning_rate, unsigned int size_i, unsigned int size_c, unsigned int count) {
-    
+    int I = 0;
 #pragma omp parallel
     {
 #pragma omp for
-        for ( int I =0; I < count; I++)
+        for ( I =0; I < count; I++)
         {
             double const *inputs = input + I*size_i;
             double const *desired_outputs = desired_output + I*size_c;
