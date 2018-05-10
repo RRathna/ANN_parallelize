@@ -95,8 +95,8 @@ void genann_free(genann *ann);
 double const *genann_run(genann const *ann, double const *inputs);
 
 /* Does a single backprop update. */
-void genann_train(genann const *ann, double const *inputs, double const *desired_outputs, double learning_rate, unsigned int size_i, unsigned int size_c, unsigned int count);
-
+void genann_train_omp(genann const *ann, double const *inputs, double const *desired_outputs, double learning_rate, unsigned int size_i, unsigned int size_c, unsigned int count);
+void genann_train(genann const *ann, double const *inputs, double const *desired_outputs, double learning_rate);
 /* Saves the ann. */
 void genann_write(genann const *ann, FILE *out);
 
