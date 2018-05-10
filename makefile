@@ -2,9 +2,13 @@ CCFLAGS = -fopenmp -Wall -Wshadow -O2 -g
 LDLIBS = -lm
 
 
-all: example4
+all: example omp_example mpi_example
 
-example4: example4.o genann.o
+example: example.o genann.o
+
+omp_example: omp_example.o omp_genann.o
+
+mpi_example: mpi_example.o genann.o
 
 
 clean:
