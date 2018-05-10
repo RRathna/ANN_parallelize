@@ -235,7 +235,7 @@ double const *genann_run(genann const *ann, double const *inputs) {
 }
 
 
-void genann_train(genann const *ann, double const *input, double const *desired_output, double learning_rate, unsigned int size_i, unsigned int size_c, unsigned int count) {
+void genann_train_omp(genann const *ann, double const *input, double const *desired_output, double learning_rate, unsigned int size_i, unsigned int size_c, unsigned int count) {
     
 #pragma omp parallel
     {
