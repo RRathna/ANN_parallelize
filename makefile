@@ -13,7 +13,7 @@ mpi_exe: mpi_example.o genann.o
 
 
 clean:
-      	$(RM) *.o
+        $(RM) *.o
         $(RM) *.exe
         $(RM) persist.txt
 
