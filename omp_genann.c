@@ -21,7 +21,10 @@
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
  *
- * Edited on 07/05/2018 by R. Rathna
+ * Edited by R. Rathna on 05/09/2018
+ *   1. Removed dependency on previous iteration from loop
+ *   2. Added omp parallelism
+ *   3. Changed design of genann_train()
  */
 
 #include "genann.h"
@@ -32,7 +35,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <omp.h>
+#include <omp.h>
 
 #define LOOKUP_SIZE 4096
 
@@ -232,175 +235,200 @@ double const *genann_run(genann const *ann, double const *inputs) {
 }
 
 
-void genann_train(genann const *ann, double const *inputs, double const *desired_outputs, double learning_rate) {
-    /* To begin with, we must run the network forward. */
-    genann_run(ann, inputs);
+void genann_train(genann const *ann, double const *input, double const *desired_output, double learning_rate, unsigned int size_i, unsigned int size_c, unsigned int count) {
     
-    int h, j, k;
-    
-    /* First set the output layer deltas. */
+#pragma omp parallel
     {
-        double const *o = ann->output + ann->inputs + ann->hidden * ann->hidden_layers; /* First output. */
-        double *d = ann->delta + ann->hidden * ann->hidden_layers; /* First delta. */
-        double const *t = desired_outputs; /* First desired output. */
-        //double const *oo = ann->output + ann->inputs + ann->hidden * ann->hidden_layers; /* First output. */
-        //double *dd = ann->delta + ann->hidden * ann->hidden_layers; /* First delta. */
-        //double const *tt = desired_outputs; /* First desired output. */
-        
-        
-        /* Set output layer deltas. */
-        if (ann->activation_output == genann_act_linear) {
-#pragma omp parallel for
-            for (j = 0; j < ann->outputs; ++j) {
-                d[j] = t[j] - o[j];
-                //*dd++ = *tt++ - *oo++;
-            }
-            d += ann->outputs;
-            t += ann->outputs;
-            o += ann->outputs;
-        } else {
-#pragma omp parallel for
-            for (j = 0; j < ann->outputs; ++j) {
-                d[j] = (t[j] - o[j]) * o[j] * (1.0 - o[j]);
-                //*dd++ = (*tt - *oo) * *oo * (1.0 - *oo);
-                //++oo; ++tt;
-                //printf(" d[%d] : %f, *(dd-1) : %f\n",j,d[j],*(dd-1));
-            }
-            d += ann->outputs;
-            t += ann->outputs;
-            o += ann->outputs;
-        }
-    }
-    
-    
-    
-    /* Set hidden layer deltas, start on last layer and work backwards. */
-    /* Note that loop is skipped in the case of hidden_layers == 0. */
-    for (h = ann->hidden_layers - 1; h >= 0; --h) {
-        
-        /* Find first output and delta in this layer. */
-        double const *o = ann->output + ann->inputs + (h * ann->hidden);
-        double *d = ann->delta + (h * ann->hidden);
-        //double const *o_ = ann->output + ann->inputs + (h * ann->hidden);
-        //double *d_ = ann->delta + (h * ann->hidden);
-        
-        /* Find first delta in following layer (which may be hidden or output). */
-        double const * const dd = ann->delta + ((h+1) * ann->hidden);
-        
-        /* Find first weight in following layer (which may be hidden or output). */
-        double const * const ww = ann->weight + ((ann->inputs+1) * ann->hidden) + ((ann->hidden+1) * ann->hidden * (h));
-        double delta = 0;
-        int t = (h == ann->hidden_layers-1 ? ann->outputs : ann->hidden);
-        #pragma omp parallel for collapse(2)
-        for (j = 0; j < ann->hidden; ++j) {
-            for (k = 0; k < t; ++k) {
-                if (k == 0) delta = 0;
-                const double forward_delta = dd[k];
-                const int windex = k * (ann->hidden + 1) + (j + 1);
-                const double forward_weight = ww[windex];
-                delta += forward_delta * forward_weight;
-                if (k == t-1)
-                {
-                    d[j] = o[j] * (1.0-o[j]) * delta;
-                    //*d_ = *o_ * (1.0-*o) * delta;
-                    //++d_; ++o_;
-                    //printf("d[%d] : %f, *d_ : %f\n",j,d[j],*d_ );
-                }
-            }
-        }
-        d = d +  ann->hidden*t;
-    }
-    //exit(0);
-    
-    /* Train the outputs. */
-    {
-        /* Find first output delta. */
-        double const *d = ann->delta + ann->hidden * ann->hidden_layers; /* First output delta. */
-        
-        /* Find first weight to first output delta. */
-        double *w = ann->weight + (ann->hidden_layers
-                                   ? ((ann->inputs+1) * ann->hidden + (ann->hidden+1) * ann->hidden * (ann->hidden_layers-1))
-                                   : (0));
-        
-        /* Find first output in previous layer. */
-        double const * const i = ann->output + (ann->hidden_layers
-                                                ? (ann->inputs + (ann->hidden) * (ann->hidden_layers-1))
-                                                : 0);
-        int t = (ann->hidden_layers ? ann->hidden : ann->inputs) + 1;
-        /* Set output layer weights. */
-        #pragma omp parallel for collapse(2)
-        for (j = 0; j < ann->outputs; ++j) {
-            for (k = 0; k < t; ++k) {
-                if (k == 0) {
-                    w[j*t + k] += d[j] * learning_rate * -1.0;
+#pragma omp for
+        for ( int I =0; I < count; I++)
+        {
+            double const *inputs = input + I*size_i;
+            double const *desired_outputs = desired_output + I*size_c;
+            /* To begin with, we must run the network forward. */
+            genann_run(ann, inputs);
+            
+            int h, j, k,t;
+            /* First set the output layer deltas. */
+            {
+                double const *o = ann->output + ann->inputs + ann->hidden * ann->hidden_layers; /* First output. */
+                double *d = ann->delta + ann->hidden * ann->hidden_layers; /* First delta. */
+                double const *t = desired_outputs; /* First desired output. */
+                //double const *oo = ann->output + ann->inputs + ann->hidden * ann->hidden_layers; /* First output. */
+                //double *dd = ann->delta + ann->hidden * ann->hidden_layers; /* First delta. */
+                //double const *tt = desired_outputs; /* First desired output. */
+                
+                
+                /* Set output layer deltas. */
+                if (ann->activation_output == genann_act_linear) {
+                    //#pragma omp parallel for
+                    for (j = 0; j < ann->outputs; ++j) {
+                        d[j] = t[j] - o[j];
+                        //*dd++ = *tt++ - *oo++;
+                    }
+                    d += ann->outputs;
+                    t += ann->outputs;
+                    o += ann->outputs;
                 } else {
-                    w[j*t + k] += d[j] * learning_rate * i[k-1];
+                    //#pragma omp parallel for
+                    for (j = 0; j < ann->outputs; ++j) {
+                        d[j] = (t[j] - o[j]) * o[j] * (1.0 - o[j]);
+                        //*dd++ = (*tt - *oo) * *oo * (1.0 - *oo);
+                        //++oo; ++tt;
+                        //printf(" d[%d] : %f, *(dd-1) : %f\n",j,d[j],*(dd-1));
+                    }
+                    d += ann->outputs;
+                    t += ann->outputs;
+                    o += ann->outputs;
                 }
             }
-        }
-        w += ann->outputs*t;
-        d+=ann->outputs;
-        
-        assert(w - ann->weight == ann->total_weights);
-    }
-    
-    /* Train the hidden layers. */
-    int t = ann->hidden + 1;
-    
-    #pragma omp parallel for collapse(3)
-    for (h = ann->hidden_layers - 1; h > 0; --h) {
-
-        for (j = 0; j < ann->hidden; ++j) {
-            for (k = 0; k < t; ++k) {
-                /* Find first delta in this layer. */
-                double const *d = ann->delta + (h * ann->hidden);
-                
-                /* Find first input to this layer. */
-                double const *i = ann->output + (h
-                                   ? (ann->inputs + ann->hidden * (h-1))
-                                   : 0);
-                
-                /* Find first weight to this layer. */
-                double *w = ann->weight + (h
-                                   ? ((ann->inputs+1) * ann->hidden + (ann->hidden+1) * (ann->hidden) * (h-1))
-                                   : 0);
-                
-
-                if (k == 0) {
-                    w[j*t + k] += d[j] * learning_rate * -1.0;
-                } else {
-                    w[j*t + k] += d[j] * learning_rate * i[k-1];
+            
+            
+            
+            /* Set hidden layer deltas, start on last layer and work backwards. */
+            /* Note that loop is skipped in the case of hidden_layers == 0. */
+            double delta = 0;
+            t = ann->outputs;
+            //int t = (h == ann->hidden_layers-1 ? ann->outputs : ann->hidden);
+            h = ann->hidden_layers -1;
+            
+//#pragma omp for collapse(2)
+            for (j = 0; j < ann->hidden; ++j) {
+                for (k = 0; k < t; ++k) {
+                    /* Find first output and delta in this layer. */
+                    double const *o = ann->output + ann->inputs + (h * ann->hidden);
+                    double *d = ann->delta + (h * ann->hidden);
+                    
+                    /* Find first delta in following layer (which may be hidden or output). */
+                    double const * const dd = ann->delta + ((h+1) * ann->hidden);
+                    
+                    /* Find first weight in following layer (which may be hidden or output). */
+                    double const * const ww = ann->weight + ((ann->inputs+1) * ann->hidden) + ((ann->hidden+1) * ann->hidden * (h));
+                    if (k == 0) delta = 0;
+                    const double forward_delta = dd[k];
+                    const int windex = k * (ann->hidden + 1) + (j + 1);
+                    const double forward_weight = ww[windex];
+                    delta += forward_delta * forward_weight;
+                    if (k == t-1)
+                    {
+                        d[j] = o[j] * (1.0-o[j]) * delta;
+                    }
                 }
             }
-        }
-
-    }
-    h = 0;
-    t = ann->inputs + 1;
-    /* Find first delta in this layer. */
-            double const *d = ann->delta + (h * ann->hidden);
+            
+            t = ann->hidden;
+            
+//#pragma omp for collapse(3)
+            for (h = ann->hidden_layers - 2; h >= 0; --h) {
+                for (j = 0; j < ann->hidden; ++j) {
+                    for (k = 0; k < t; ++k) {
+                        /* Find first output and delta in this layer. */
+                        double const *o = ann->output + ann->inputs + (h * ann->hidden);
+                        double *d = ann->delta + (h * ann->hidden);
+                        
+                        /* Find first delta in following layer (which may be hidden or output). */
+                        double const * const dd = ann->delta + ((h+1) * ann->hidden);
+                        
+                        /* Find first weight in following layer (which may be hidden or output). */
+                        double const * const ww = ann->weight + ((ann->inputs+1) * ann->hidden) + ((ann->hidden+1) * ann->hidden * (h));
+                        if (k == 0) delta = 0;
+                        const double forward_delta = dd[k];
+                        const int windex = k * (ann->hidden + 1) + (j + 1);
+                        const double forward_weight = ww[windex];
+                        delta += forward_delta * forward_weight;
+                        if (k == t-1)
+                        {
+                            d[j] = o[j] * (1.0-o[j]) * delta;
+                        }
+                    }
+                }
+            }
+            
+            /* Train the outputs. */
+            
+            /* Find first output delta. */
+            double const *d = ann->delta + ann->hidden * ann->hidden_layers; /* First output delta. */
+            
+            /* Find first weight to first output delta. */
+            double *w = ann->weight + (ann->hidden_layers
+                                       ? ((ann->inputs+1) * ann->hidden + (ann->hidden+1) * ann->hidden * (ann->hidden_layers-1)): (0));
+            
+            /* Find first output in previous layer. */
+            double const * const i = ann->output + (ann->hidden_layers
+                                                    ? (ann->inputs + (ann->hidden) * (ann->hidden_layers-1)): 0);
+            t = (ann->hidden_layers ? ann->hidden : ann->inputs) + 1;
+            
+            /* Set output layer weights. */
+//#pragma omp for collapse(2)
+            for (j = 0; j < ann->outputs; ++j) {
+                for (k = 0; k < t; ++k) {
+                    if (k == 0) {
+                        w[j*t + k] += d[j] * learning_rate * -1.0;
+                    } else {
+                        w[j*t + k] += d[j] * learning_rate * i[k-1];
+                    }
+                }
+            }
+            w += ann->outputs*t;
+            d+=ann->outputs;
+            
+            assert(w - ann->weight == ann->total_weights);
+            
+            
+            /* Train the hidden layers. */
+            t = ann->hidden + 1;
+            
+            
+//#pragma omp for collapse(3)
+            for (h = ann->hidden_layers - 1; h > 0; --h) {
+                
+                for (j = 0; j < ann->hidden; ++j) {
+                    for (k = 0; k < t; ++k) {
+                        /* Find first delta in this layer. */
+                        double const *d = ann->delta + (h * ann->hidden);
+                        
+                        /* Find first input to this layer. */
+                        double const *i = ann->output + (h? (ann->inputs + ann->hidden * (h-1)): 0);
+                        
+                        /* Find first weight to this layer. */
+                        double *w = ann->weight + (h? ((ann->inputs+1) * ann->hidden + (ann->hidden+1) * (ann->hidden) * (h-1)): 0);
+                        
+                        
+                        if (k == 0) {
+                            w[j*t + k] += d[j] * learning_rate * -1.0;
+                        } else {
+                            w[j*t + k] += d[j] * learning_rate * i[k-1];
+                        }
+                    }
+                }
+                
+            }
+            h = 0;
+            /* Find first delta in this layer. */
+            d = ann->delta + (h * ann->hidden);
             
             /* Find first input to this layer. */
-            double const *i = ann->output + (h
-                                             ? (ann->inputs + ann->hidden * (h-1))
-                                             : 0);
+            double const *ii = ann->output + (h? (ann->inputs + ann->hidden * (h-1)): 0);
             
             /* Find first weight to this layer. */
-            double *w = ann->weight + (h
-                                       ? ((ann->inputs+1) * ann->hidden + (ann->hidden+1) * (ann->hidden) * (h-1))
-                                       : 0);
-
-    #pragma omp parallel for collapse(2) 
-    for (j = 0; j < ann->hidden; ++j) {
-        for (k = 0; k < t; ++k) {
-            if (k == 0) {    
-                w[j*t + k] += d[j] * learning_rate * -1.0;
-            } else {
-                w[j*t + k] += d[j] * learning_rate * i[k-1];
+            w = ann->weight + (h? ((ann->inputs+1) * ann->hidden + (ann->hidden+1) * (ann->hidden) * (h-1)): 0);
+            
+            
+            t = ann->inputs + 1;
+//#pragma omp for collapse(2)
+            for (j = 0; j < ann->hidden; ++j) {
+                for (k = 0; k < t; ++k) {
+                    if (k == 0) {
+                        
+                        
+                        w[j*t + k] += d[j] * learning_rate * -1.0;
+                    } else {
+                        w[j*t + k] += d[j] * learning_rate * ii[k-1];
+                    }
+                }
+                
             }
-        }
-    
-    }
+        } //end of for loop I
+    } //end of parallel
 }
 
 
