@@ -21,6 +21,10 @@
  *    misrepresented as being the original software.
  * 3. This notice may not be removed or altered from any source distribution.
  *
+ *
+ *
+ *  Edited on 05/09/2018 by R. Rathna
+ *      Changed declaration of genann_train() 
  */
 
 
@@ -91,7 +95,7 @@ void genann_free(genann *ann);
 double const *genann_run(genann const *ann, double const *inputs);
 
 /* Does a single backprop update. */
-void genann_train(genann const *ann, double const *inputs, double const *desired_outputs, double learning_rate);
+void genann_train(genann const *ann, double const *inputs, double const *desired_outputs, double learning_rate, unsigned int size_i, unsigned int size_c, unsigned int count);
 
 /* Saves the ann. */
 void genann_write(genann const *ann, FILE *out);
