@@ -100,16 +100,16 @@ int main(int argc, char *argv[])
      * 10 outputs (1 per class)
      */
     printf("load done\n");
-    genann *ann = genann_init(28*28, 3, 5, 10);
+    genann *ann = genann_init(28*28, 3, 10, 10);
 
     int i, j;
-    int loops = 500;
+    int loops = 10;
 
     /* Train the network with backpropagation. */
     printf("Training for %d loops over data.\n", loops);
     for (i = 0; i < loops; ++i) {
         for (j = 0; j < samples; ++j) {
-            genann_train(ann, input + j*28*28, class + j*10, .001);
+            genann_train(ann, input + j*28*28, class + j*10, .1);
         }
     }
     
