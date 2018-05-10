@@ -1,5 +1,6 @@
 # ANN_parallelize
 This project parallelizes the popular serial library for ANN, genann - https://codeplea.com/genann
+
 The training data used is mnist. This code uses mnist loader from Nuri Park's project - https://github.com/projectgalateia/mnist
 
 MPI version - uses the library as is and runs the training distributedly. The additions are all made to MPI_example.c
