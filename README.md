@@ -6,6 +6,11 @@ The training data used is mnist. This code uses mnist loader from Nuri Park's pr
 MPI version - uses the library as is and runs the training distributedly. The additions are all made to MPI_example.c
 OMP version - changed the train function in the library to make use of shared memory parallelism. (see omp_genann.c and omp_example.c)
 
+Instructions to run the original version
+
+  1. gcc -lm -o exe genann.c example.c
+  2. ./exe
+
 Instructions to run MPI version
 
   1. mpicc -lm -o mpi_exe genann.c mpi_example.c
