@@ -3,8 +3,8 @@ This project parallelizes the popular serial library for ANN, genann - https://c
 
 The training data used is mnist. This code uses mnist loader from Nuri Park's project - https://github.com/projectgalateia/mnist
 
-MPI version - uses the library as is and runs the training distributedly. The additions are all made to MPI_example.c
-OMP version - changed the train function in the library to make use of shared memory parallelism. (see omp_genann.c and omp_example.c)
+MPI version - Very fast, gradual drop in accuracy (due to averaging weights between nodes after each iterations). Uses the library as is and runs the training distributedly. The additions are all made to MPI_example.c
+OMP version - Work in progress - give lesser accuracy, optimal at 8 threads. Changed the train function in the library to make use of shared memory parallelism. (see omp_genann.c and omp_example.c)
 
 You can use make command to get the executables for each of the versions or follow the instructions below:
 
